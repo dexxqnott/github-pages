@@ -1,0 +1,68 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Send SOL</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@solana/web3.js@1.76.0/lib/index.iife.js"></script>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen px-4">
+  <h1 class="text-3xl font-bold mb-4">Send SOL</h1>
+  <button id="connectBtn" class="bg-purple-600 px-6 py-2 rounded hover:bg-purple-700">Connect Wallet</button>
+  <div id="walletInfo" class="my-4 hidden">
+    <p id="walletAddress" class="text-sm text-gray-300 mb-2"></p>
+    <input id="amount" type="number" placeholder="Amount in SOL"
+           class="px-4 py-2 text-black rounded mb-2 w-full"/>
+    <button id="sendBtn" class="bg-green-600 px-6 py-2 rounded hover:bg-green-700">Send SOL</button>
+  </div>
+  <p class="text-xs text-gray-500 mt-4">Built for mobile browser — requires Phantom Wallet.</p>
+
+  <script>
+    const recipient = new solanaWeb3.PublicKey("HJzWZ4AvxYr7k6C9PbJ3Mr5R8Xdgi76gRgLD7UckWeht");
+    let walletPublicKey = null;
+
+    document.getElementById("connectBtn").onclick = async () => {
+      const provider = window.solana;
+      if (provider && provider.isPhantom) {
+        try {
+          const resp = await provider.connect();
+          walletPublicKey = resp.publicKey;
+          document.getElementById("walletAddress").innerText = "Connected: " + walletPublicKey.toString();
+          document.getElementById("walletInfo").classList.remove("hidden");
+        } catch (err) {
+          alert("Connection rejected.");
+        }
+      } else {
+        alert("Phantom Wallet not found. Open in browser with Phantom.");
+      }
+    };
+
+    document.getElementById("sendBtn").onclick = async () => {
+      const amount = parseFloat(document.getElementById("amount").value);
+      if (!walletPublicKey || !amount) {
+        alert("Please connect wallet and enter amount.");
+        return;
+      }
+
+      const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("mainnet-beta"), "confirmed");
+      const transaction = new solanaWeb3.Transaction().add(
+        solanaWeb3.SystemProgram.transfer({
+          fromPubkey: walletPublicKey,
+          toPubkey: recipient,
+          lamports: solanaWeb3.LAMPORTS_PER_SOL * amount,
+        })
+      );
+
+      try {
+        const { signature } = await window.solana.signAndSendTransaction(transaction);
+        await connection.confirmTransaction(signature);
+        alert("Transaction sent!\nSignature: " + signature);
+      } catch (err) {
+        alert("Failed: " + err.message);
+      }
+    };
+  </script>
+</body>
+</html>
